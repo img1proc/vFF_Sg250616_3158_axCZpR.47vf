@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file, redirect
+from flask import Flask, render_template, request
 import os
 import tempfile
 from utils.verify_signature import verify_signature

@@ -1,25 +1,17 @@
-import hashlib
 import subprocess
 
 def verify_signature(pdf_path, sig_path, pub_key_path):
-    # PDFのハッシュを計算
-    with open(pdf_path, 'rb') as f:
-        pdf_data = f.read()
-        pdf_hash = hashlib.sha256(pdf_data).hexdigest()
+    try:
+        # OpenSSLコマンドで署名の検証を実行
+        result = subprocess.run([
+            'openssl', 'dgst', '-sha256',
+            '-verify', pub_key_path,
+            '-signature', sig_path,
+            pdf_path
+        ], check=True, stderr=subprocess.PIPE)
 
-    # 署名ファイルを公開鍵で復号
-    decrypted_path = sig_path + '.decrypted.txt'
+        return True, "Match", "Match"
 
-    subprocess.run([
-        'openssl', 'rsautl', '-verify',
-        '-inkey', pub_key_path,
-        '-pubin',
-        '-in', sig_path,
-        '-out', decrypted_path
-    ], check=True)
-
-    with open(decrypted_path, 'rb') as f:
-        decrypted_hash = f.read().hex()
-
-    match = (pdf_hash == decrypted_hash)
-    return match, pdf_hash, decrypted_hash
+    except subprocess.CalledProcessError as e:
+        # 検証失敗（署名が一致しない、鍵エラーなど）
+        return False, "Verification Failed", e.stderr.decode().strip()
