@@ -1,17 +1,34 @@
-import subprocess
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.exceptions import InvalidSignature
+from hashlib import sha256
 
-def verify_signature(pdf_path, sig_path, pub_key_path):
+def verify_signature(pdf_path, signature_path, public_key_path):
     try:
-        # OpenSSLコマンドで署名の検証を実行
-        result = subprocess.run([
-            'openssl', 'dgst', '-sha256',
-            '-verify', pub_key_path,
-            '-signature', sig_path,
-            pdf_path
-        ], check=True, stderr=subprocess.PIPE)
+        # PDFを読み込んでSHA-256ハッシュを計算
+        with open(pdf_path, "rb") as f:
+            pdf_data = f.read()
+        hash_value = sha256(pdf_data).digest()
 
-        return True, "Match", "Match"
+        # 署名を読み込み
+        with open(signature_path, "rb") as f:
+            signature = f.read()
 
-    except subprocess.CalledProcessError as e:
-        # 検証失敗（署名が一致しない、鍵エラーなど）
-        return False, "Verification Failed", e.stderr.decode().strip()
+        # 公開鍵を読み込み
+        with open(public_key_path, "rb") as f:
+            public_key = serialization.load_pem_public_key(f.read())
+
+        # 検証
+        public_key.verify(
+            signature,
+            hash_value,
+            padding.PKCS1v15(),
+            hashes.SHA256()
+        )
+
+        return True, hash_value.hex()
+
+    except InvalidSignature:
+        return False, "Signature does NOT match"
+    except Exception as e:
+        return False, str(e)

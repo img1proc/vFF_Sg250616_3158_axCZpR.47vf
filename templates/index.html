@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head><title>Verify Author Signature</title></head>
+<body>
+  <h1>Verify Author Signature</h1>
+##  3. templates/index.html（出版社側のUI）
+  <form method="post" enctype="multipart/form-data">
+    <label>Signed PDF:</label><br>
+    <input type="file" name="pdf" required><br><br>
+
+    <label>Signature File (.bin):</label><br>
+    <input type="file" name="signature" required><br><br>
+
+    <label>Author Public Key (.pem):</label><br>
+    <input type="file" name="public_key" required><br><br>
+
+    <button type="submit">Verify</button>
+  </form>
+
+  {% if result %}
+    <h2>{{ result }}</h2>
+  {% endif %}
+
+  {% if hash_value %}
+    <p><strong>Hash (SHA-256):</strong></p>
+    <textarea rows="2" cols="80" readonly>{{ hash_value }}</textarea>
+  {% endif %}
+
+  {% if error %}
+    <p style="color: red;"><strong>Error:</strong> {{ error }}</p>
+  {% endif %}
+</body>
+</html>

@@ -1,42 +1,41 @@
 from flask import Flask, render_template, request
-import os
-import tempfile
+import os, tempfile
+
 from utils.verify_signature import verify_signature
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
+UPLOAD_FOLDER = tempfile.gettempdir()
 
-@app.route('/', methods=['GET', 'POST'])
-def verify():
+@app.route("/", methods=["GET", "POST"])
+def home():
     result = None
+    hash_value = None
     error = None
-    hash_original = None
-    hash_decrypted = None
 
-    if request.method == 'POST':
-        pdf = request.files.get('pdf')
-        signature = request.files.get('signature')
-        public_key = request.files.get('public_key')
+    if request.method == "POST":
+        try:
+            pdf_file = request.files["pdf"]
+            sig_file = request.files["signature"]
+            pubkey_file = request.files["public_key"]
 
-        if not pdf or not signature or not public_key:
-            error = 'All three files are required.'
-        else:
-            pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], pdf.filename)
-            sig_path = os.path.join(app.config['UPLOAD_FOLDER'], signature.filename)
-            pub_path = os.path.join(app.config['UPLOAD_FOLDER'], public_key.filename)
+            pdf_path = os.path.join(UPLOAD_FOLDER, pdf_file.filename)
+            sig_path = os.path.join(UPLOAD_FOLDER, sig_file.filename)
+            pubkey_path = os.path.join(UPLOAD_FOLDER, pubkey_file.filename)
 
-            pdf.save(pdf_path)
-            signature.save(sig_path)
-            public_key.save(pub_path)
+            pdf_file.save(pdf_path)
+            sig_file.save(sig_path)
+            pubkey_file.save(pubkey_path)
 
-            try:
-                match, hash_original, hash_decrypted = verify_signature(pdf_path, sig_path, pub_path)
-                result = '✔️ Signature Verified' if match else '❌ Signature does NOT match'
-            except Exception as e:
-                error = f'Error verifying signature: {str(e)}'
+            is_valid, info = verify_signature(pdf_path, sig_path, pubkey_path)
 
-    return render_template('verify.html',
-                           result=result,
-                           error=error,
-                           hash_original=hash_original,
-                           hash_decrypted=hash_decrypted)
+            if is_valid:
+                result = "✅ Signature Verified"
+                hash_value = info
+            else:
+                result = "❌ Signature does NOT match"
+                error = info
+
+        except Exception as e:
+            error = str(e)
+
+    return render_template("index.html", result=result, hash_value=hash_value, error=error)
